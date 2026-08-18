@@ -1,0 +1,11 @@
+# Copy to repos.yaml and edit. One agent is created per entry.
+repos:
+  - repo: owner/first-repo
+    name: First repo
+    description: What this codebase does, in one or two sentences.
+    review_focus: correctness, security, and API contracts
+
+  - repo: owner/second-repo
+    name: Second repo
+    description: Another project the bot should review.
+    review_focus: data integrity and missed edge cases
