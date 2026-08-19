@@ -4,6 +4,7 @@ import json
 
 import pytest
 
+from app.github_api.models import PullFile
 from app.jobs import JobStatus, JobStore
 from app.review.agent import ReviewAgent
 from app.review.schema import InlineComment
@@ -59,6 +60,50 @@ async def test_valid_comment_is_posted_invalid_is_summarized(
     assert "Could not attach" in review["body"]
     assert "not in the diff" in review["body"]
     assert "Widgets" in review["body"]
+
+
+async def test_junk_files_are_skipped_and_not_sent_to_llm(
+    agent: ReviewAgent, github: FakeGitHub, llm: FakeLLM
+) -> None:
+    github.files[("acme/widgets", 7)] = [
+        PullFile(
+            filename="package-lock.json",
+            status="modified",
+            patch="@@ -1,1 +1,1 @@\n-a\n+b\n",
+        ),
+        PullFile(
+            filename="frontend/dist/bundle.js",
+            status="modified",
+            patch="@@ -1,1 +1,1 @@\n-a\n+b\n",
+        ),
+        PullFile(
+            filename="src/login.py",
+            status="modified",
+            patch=SAMPLE_PATCH,
+        ),
+    ]
+    job = agent.jobs.create(repo="acme/widgets", pr_number=7, head_sha="abc123def")
+    result = await agent.review_pr(job)
+    assert result.status == JobStatus.DONE
+    assert len(llm.complete_calls) == 1
+    user = llm.complete_calls[0][1]["content"]
+    assert "src/login.py" in user
+    assert "package-lock.json" not in user
+    assert "bundle.js" not in user
+    body = github.reviews[0]["body"]
+    assert "package-lock.json" in body
+    assert "frontend/dist/bundle.js" in body
+
+
+async def test_review_prompt_omits_pr_body(
+    agent: ReviewAgent, github: FakeGitHub, llm: FakeLLM
+) -> None:
+    github.pulls[("acme/widgets", 7)].body = "SECRET_PR_BODY_SHOULD_NOT_BE_SENT"
+    job = agent.jobs.create(repo="acme/widgets", pr_number=7, head_sha="abc123def")
+    await agent.review_pr(job)
+    user = llm.complete_calls[0][1]["content"]
+    assert "SECRET_PR_BODY_SHOULD_NOT_BE_SENT" not in user
+    assert "Log passwords" in user
 
 
 async def test_failure_posts_issue_comment(

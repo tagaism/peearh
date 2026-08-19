@@ -12,6 +12,7 @@ from app.repos.models import RepoRecord
 from app.review.llm import LLMClient, LLMError
 from app.review.prompts import file_user_prompt, system_prompt
 from app.review.schema import FileReview, InlineComment, parse_review_json
+from app.review.skip import skip_reason
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +132,10 @@ class ReviewAgent:
         skipped: list[tuple[str, str]] = []
         remaining_slots = self.settings.max_files
         for file in files:
+            junk = skip_reason(file.filename)
+            if junk:
+                skipped.append((file.filename, junk))
+                continue
             if remaining_slots <= 0:
                 skipped.append((file.filename, "over MAX_FILES"))
                 continue
@@ -153,9 +158,7 @@ class ReviewAgent:
             {"role": "system", "content": system_prompt(self.record)},
             {
                 "role": "user",
-                "content": file_user_prompt(
-                    self.record, pull, plan.file, plan.commentable
-                ),
+                "content": file_user_prompt(pull, plan.file, plan.commentable),
             },
         ]
         raw = await self.llm.complete(messages)

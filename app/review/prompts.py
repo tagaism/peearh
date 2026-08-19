@@ -44,7 +44,6 @@ def system_prompt(record: RepoRecord) -> str:
 
 
 def file_user_prompt(
-    record: RepoRecord,
     pull: PullRequest,
     file: PullFile,
     commentable: list[CommentableLine],
@@ -52,16 +51,10 @@ def file_user_prompt(
     allowed = ", ".join(
         f"{item.line}:{item.side}" for item in commentable
     ) or "(none)"
-    body = (pull.body or "").strip() or "(no description)"
     patch = file.patch or "(no patch)"
     return (
-        f"Pull request #{pull.number}: {pull.title}\n"
-        f"Author: {pull.user_login or 'unknown'}\n"
-        f"Description:\n{body}\n\n"
-        f"You are reviewing this PR as the {record.display_name} agent "
-        f"for {record.repo}.\n\n"
-        f"File: {file.filename}\n"
-        f"Status: {file.status}\n"
+        f"PR #{pull.number}: {pull.title}\n"
+        f"File: {file.filename} ({file.status})\n"
         f"Commentable lines (line:side): {allowed}\n\n"
         f"Patch:\n{patch}\n"
     )
