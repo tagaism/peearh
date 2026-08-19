@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    image: peearh:local
+    ports:
+      - "8008:8000"
+    env_file:
+      - .env
+    environment:
+      REPOS_FILE: /app/repos.yaml
+    volumes:
+      - ./repos.yaml:/app/repos.yaml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
