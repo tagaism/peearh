@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     llm_base_url: str = "http://127.0.0.1:1234/v1"
     llm_api_key: str = "lm-studio"
     llm_model: str = ""
+    llm_max_tokens: int = 4096
     max_files: int = 30
     max_patch_chars: int = 20_000
     llm_timeout_seconds: float = 180.0
