@@ -14,7 +14,7 @@ from app.webhooks.signatures import verify_signature
 
 logger = logging.getLogger(__name__)
 
-REVIEW_ACTIONS = {"opened", "ready_for_review"}
+REVIEW_ACTIONS = {"opened", "ready_for_review", "synchronize"}
 
 router = APIRouter()
 
