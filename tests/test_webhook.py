@@ -54,14 +54,36 @@ def test_draft_is_ignored(client) -> None:
     assert "draft" in response.json()["reason"]
 
 
-def test_synchronize_is_ignored(client) -> None:
+def test_synchronize_is_accepted(client) -> None:
     response = signed_request(
-        client, pr_payload(action="synchronize"), delivery="d-sync"
+        client, pr_payload(action="synchronize", sha="newsha99"), delivery="d-sync"
     )
     assert response.status_code == 202
     body = response.json()
-    assert body["status"] == JobStatus.IGNORED.value
-    assert "synchronize" in body["reason"]
+    assert body["status"] == JobStatus.ACCEPTED.value
+    assert body["action"] == "synchronize"
+    assert body["head_sha"] == "newsha99"
+
+
+def test_synchronize_same_sha_is_duplicate(client) -> None:
+    first = signed_request(client, pr_payload(action="opened"), delivery="d-open")
+    assert first.json()["status"] == JobStatus.ACCEPTED.value
+    second = signed_request(
+        client, pr_payload(action="synchronize"), delivery="d-sync-same"
+    )
+    assert second.status_code == 202
+    assert second.json()["status"] == JobStatus.DUPLICATE.value
+
+
+def test_draft_synchronize_is_ignored(client) -> None:
+    response = signed_request(
+        client,
+        pr_payload(action="synchronize", draft=True, sha="draftsha"),
+        delivery="d-sync-draft",
+    )
+    assert response.status_code == 202
+    assert response.json()["status"] == JobStatus.IGNORED.value
+    assert "draft" in response.json()["reason"]
 
 
 def test_unregistered_repo_is_ignored(client) -> None:

@@ -2,7 +2,7 @@
 
 A FastAPI bot that reviews GitHub pull requests with an OpenAI-compatible LLM. The default setup is [OpenRouter](https://openrouter.ai/) (`qwen/qwen3-coder`, the 480B-A35B-Instruct model). Any other OpenAI-compatible endpoint (including local [LM Studio](https://lmstudio.ai/)) works by changing `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL`.
 
-GitHub sends a webhook when a PR is opened (or a draft is marked ready). Peearh verifies the signature, hands the diff to the **agent registered for that repository**, and posts a GitHub review: a summary plus inline comments on real diff lines.
+GitHub sends a webhook when a PR is opened, marked ready, or updated with new commits. Peearh verifies the signature, hands the diff to the **agent registered for that repository**, and posts a GitHub review: a summary plus inline comments on real diff lines.
 
 One agent per repo. Each agent stores a short brief (what the project is, what to focus on) and uses it in the review prompt.
 
@@ -17,7 +17,7 @@ GitHub --HTTPS--> ngrok / Cloudflare Tunnel --> FastAPI (host :8008)
 
 The tunnel only exposes FastAPI. The LLM is whatever `LLM_BASE_URL` in `.env` points at.
 
-Triggers: `pull_request` actions `opened` and `ready_for_review`. Drafts are skipped. Reviews are posted as `COMMENT` (never approve / request changes).
+Triggers: `pull_request` actions `opened`, `ready_for_review`, and `synchronize`. Drafts are skipped. The same head SHA is not reviewed twice. Reviews are posted as `COMMENT` (never approve / request changes).
 
 ## Setup
 
