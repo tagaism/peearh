@@ -60,6 +60,10 @@ async def test_valid_comment_is_posted_invalid_is_summarized(
     assert "Could not attach" in review["body"]
     assert "not in the diff" in review["body"]
     assert "Widgets" in review["body"]
+    kinds = [event.kind for event in result.events]
+    assert "reasoning" in kinds
+    assert "fetch" in kinds
+    assert "done" in kinds
 
 
 async def test_junk_files_are_skipped_and_not_sent_to_llm(

@@ -1,6 +1,25 @@
 from tests.conftest import pr_payload, signed_request
 
 
+def test_ui_is_served(client) -> None:
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "Peearh" in response.text
+    assert "reasoning" in response.text.lower()
+
+
+def test_list_jobs_includes_events(client) -> None:
+    accepted = signed_request(client, pr_payload(), delivery="ui-job")
+    listed = client.get("/jobs")
+    assert listed.status_code == 200
+    jobs = listed.json()["jobs"]
+    assert any(item["id"] == accepted.json()["id"] for item in jobs)
+    match = next(item for item in jobs if item["id"] == accepted.json()["id"])
+    assert match["events"]
+    assert match["events"][0]["kind"] in {"accepted", "running", "ignored"}
+
+
 def test_health(client) -> None:
     response = client.get("/health")
     assert response.status_code == 200

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Peearh — review process</title>
+  <style>
+    :root {
+      --bg: #14110c;
+      --panel: #1e1a14;
+      --line: #3a3226;
+      --ink: #f3ead8;
+      --muted: #b5a48a;
+      --accent: #e2b340;
+      --run: #7eb8d6;
+      --ok: #8fbf7a;
+      --bad: #d67a6a;
+      --skip: #9a8b74;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 15px/1.45 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; }
+    header {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+      padding: 1rem 1.25rem; border-bottom: 1px solid var(--line);
+    }
+    header h1 { margin: 0; font-size: 1.15rem; font-weight: 600; letter-spacing: 0.04em; }
+    header h1 span { color: var(--accent); }
+    header p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+    .layout { display: grid; grid-template-columns: 280px 1fr; height: calc(100% - 58px); }
+    aside { border-right: 1px solid var(--line); overflow: auto; background: var(--panel); }
+    main { overflow: auto; padding: 1.25rem 1.5rem 3rem; }
+    .job {
+      display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line);
+      background: transparent; color: inherit; padding: 0.85rem 1rem; cursor: pointer; font: inherit;
+    }
+    .job:hover, .job.active { background: #2a241b; }
+    .job .meta { color: var(--muted); font-size: 0.78rem; font-family: ui-monospace, Menlo, monospace; }
+    .pill {
+      display: inline-block; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 0.1rem 0.4rem; border: 1px solid var(--line); border-radius: 999px; color: var(--muted);
+    }
+    .pill.running, .pill.accepted { color: var(--run); border-color: var(--run); }
+    .pill.done { color: var(--ok); border-color: var(--ok); }
+    .pill.failed { color: var(--bad); border-color: var(--bad); }
+    .empty { color: var(--muted); max-width: 36rem; }
+    .empty code { color: var(--accent); }
+    ol.trace { list-style: none; margin: 0; padding: 0; }
+    ol.trace li {
+      position: relative; padding: 0 0 1.15rem 1.2rem; border-left: 1px solid var(--line); margin-left: 0.4rem;
+    }
+    ol.trace li::before {
+      content: ""; position: absolute; left: -5px; top: 0.35rem; width: 9px; height: 9px;
+      border-radius: 50%; background: var(--accent);
+    }
+    ol.trace li.skip::before { background: var(--skip); }
+    ol.trace li.failed::before { background: var(--bad); }
+    ol.trace li.done::before { background: var(--ok); }
+    ol.trace .when { display: block; color: var(--muted); font-size: 0.75rem; font-family: ui-monospace, Menlo, monospace; }
+    ol.trace .msg { margin: 0.15rem 0 0; }
+    details {
+      margin-top: 0.45rem; background: #120f0b; border: 1px solid var(--line); padding: 0.4rem 0.6rem;
+    }
+    details summary { cursor: pointer; color: var(--accent); font-size: 0.85rem; }
+    pre {
+      white-space: pre-wrap; word-break: break-word; margin: 0.5rem 0 0;
+      font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--ink);
+    }
+    h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.35rem; }
+    .sub { color: var(--muted); margin: 0 0 1.25rem; font-family: ui-monospace, Menlo, monospace; font-size: 0.8rem; }
+    @media (max-width: 720px) {
+      .layout { grid-template-columns: 1fr; grid-template-rows: 34% 1fr; }
+      aside { border-right: 0; border-bottom: 1px solid var(--line); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Peearh <span>reasoning</span></h1>
+    <p>Live review process · polls every 1.5s</p>
+  </header>
+  <div class="layout">
+    <aside id="jobs"></aside>
+    <main id="detail">
+      <div class="empty">
+        <p>Waiting for a GitHub webhook. Open or push to a registered PR, then this page will show each step: fetch, skip, model reasoning, and the posted review.</p>
+        <p>Keep this tab open at <code>http://127.0.0.1:8008</code>.</p>
+      </div>
+    </main>
+  </div>
+  <script>
+    const jobsEl = document.getElementById("jobs");
+    const detailEl = document.getElementById("detail");
+    let selected = location.hash.replace("#", "") || null;
+    let cache = [];
+
+    function esc(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+
+    function fmt(iso) {
+      try { return new Date(iso).toLocaleTimeString(); } catch { return iso; }
+    }
+
+    function renderList() {
+      if (!cache.length) {
+        jobsEl.innerHTML = '<p class="empty" style="padding:1rem">No jobs yet.</p>';
+        return;
+      }
+      jobsEl.innerHTML = cache.map((job) => `
+        <button class="job ${job.id === selected ? "active" : ""}" data-id="${esc(job.id)}">
+          <span class="pill ${esc(job.status)}">${esc(job.status)}</span>
+          <div>${esc(job.repo)}${job.pr_number != null ? " #" + job.pr_number : ""}</div>
+          <div class="meta">${esc(job.action || "")} · ${fmt(job.created_at)}</div>
+        </button>
+      `).join("");
+      jobsEl.querySelectorAll(".job").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selected = btn.dataset.id;
+          location.hash = selected;
+          renderList();
+          renderDetail();
+        });
+      });
+    }
+
+    function renderDetail() {
+      const job = cache.find((j) => j.id === selected);
+      if (!job) {
+        detailEl.innerHTML = `<div class="empty"><p>Select a job, or wait for the next webhook.</p></div>`;
+        return;
+      }
+      const events = job.events || [];
+      const steps = events.length
+        ? `<ol class="trace">${events.map((ev) => `
+            <li class="${esc(ev.kind)}">
+              <span class="when">${fmt(ev.at)} · ${esc(ev.kind)}</span>
+              <p class="msg">${esc(ev.message)}</p>
+              ${ev.detail ? `<details ${ev.kind === "reasoning" ? "open" : ""}>
+                <summary>${ev.kind === "reasoning" ? "Reasoning / notes" : "Detail"}</summary>
+                <pre>${esc(ev.detail)}</pre>
+              </details>` : ""}
+            </li>`).join("")}</ol>`
+        : `<p class="empty">No steps recorded yet.</p>`;
+      detailEl.innerHTML = `
+        <h2>${esc(job.repo)}${job.pr_number != null ? " #" + job.pr_number : ""}</h2>
+        <p class="sub">${esc(job.status)} · ${esc(job.action || "—")} · ${esc(job.head_sha || "").slice(0, 12)}</p>
+        ${job.error ? `<p class="empty">${esc(job.error)}</p>` : ""}
+        ${steps}
+      `;
+    }
+
+    async function tick() {
+      try {
+        const res = await fetch("/jobs");
+        const data = await res.json();
+        cache = data.jobs || [];
+        if (!selected && cache.length) selected = cache[0].id;
+        renderList();
+        renderDetail();
+      } catch (err) {
+        detailEl.innerHTML = `<p class="empty">Could not load jobs: ${esc(err)}</p>`;
+      }
+    }
+
+    tick();
+    setInterval(tick, 1500);
+  </script>
+</body>
+</html>

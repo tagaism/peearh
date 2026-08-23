@@ -7,6 +7,7 @@ from app.github_api.models import (
     RepoInfo,
     ReviewComment,
 )
+from app.review.llm import Completion
 
 
 class FakeGitHub:
@@ -130,10 +131,12 @@ class FakeLLM:
     async def list_models(self) -> list[str]:
         return ["fake-model"]
 
-    async def complete(self, messages: list[dict[str, str]]) -> str:
+    async def complete(self, messages: list[dict[str, str]]) -> Completion:
         self.complete_calls.append(messages)
         if self._replies:
-            return self._replies.pop(0)
-        if self._text is not None:
-            return self._text
-        return '{"summary": "Looks fine.", "comments": []}'
+            text = self._replies.pop(0)
+        elif self._text is not None:
+            text = self._text
+        else:
+            text = '{"summary": "Looks fine.", "comments": []}'
+        return Completion(content=text, reasoning="")
