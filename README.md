@@ -19,6 +19,12 @@ The tunnel only exposes FastAPI. The LLM is whatever `LLM_BASE_URL` in `.env` po
 
 Triggers: `pull_request` actions `opened`, `ready_for_review`, and `synchronize`. Drafts are skipped. The same head SHA is not reviewed twice. Reviews are posted as `COMMENT` (never approve / request changes).
 
+## Review UI
+
+Open [http://127.0.0.1:8008](http://127.0.0.1:8008). Sessions are on the left; the selected session’s full reasoning is on the right.
+
+![Peearh terminal UI](docs/ui.png)
+
 ## Setup
 
 ### 1. Config files
@@ -68,7 +74,7 @@ Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or E
 docker compose up --build
 ```
 
-The API is [http://127.0.0.1:8008](http://127.0.0.1:8008). Open that URL in a browser to watch each review’s reasoning live (fetch, skipped files, model notes, posted comments).
+The API and UI are at [http://127.0.0.1:8008](http://127.0.0.1:8008).
 
 | Piece | Role |
 | --- | --- |
