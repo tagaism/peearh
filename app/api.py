@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import FileResponse
 
 from app.jobs import JobStore
 from app.repos.models import RepoCreate
@@ -9,9 +12,16 @@ from app.review.registry import AgentRegistry
 
 router = APIRouter()
 
+_STATIC = Path(__file__).resolve().parent / "static" / "index.html"
+
 
 def _state(request: Request):
     return request.app.state
+
+
+@router.get("/")
+async def ui() -> FileResponse:
+    return FileResponse(_STATIC, media_type="text/html")
 
 
 @router.get("/health")
@@ -26,6 +36,12 @@ async def health_llm(request: Request) -> dict[str, object]:
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {"status": "ok", "models": models}
+
+
+@router.get("/jobs")
+async def list_jobs(request: Request) -> dict:
+    jobs: JobStore = _state(request).jobs
+    return {"jobs": [job.to_dict() for job in jobs.list()]}
 
 
 @router.get("/jobs/{job_id}")

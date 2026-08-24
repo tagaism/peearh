@@ -55,16 +55,28 @@ class ReviewAgent:
             )
 
         self.jobs.update(job, status=JobStatus.RUNNING)
+        job.add_event("running", f"Agent {self.record.display_name} started review")
         owner, name = self.record.owner, self.record.name_only
         number = job.pr_number
 
         try:
+            job.add_event("fetch", f"Fetching PR #{number} files from GitHub")
             pull = await self.github.get_pull(owner, name, number)
             files = await self.github.list_pull_files(owner, name, number)
             plans, skipped = self._plan_files(files)
+            for path, reason in skipped:
+                job.add_event("skip", f"Skip `{path}`", reason)
+            job.add_event(
+                "plan",
+                f"Reviewing {len(plans)} file(s), skipped {len(skipped)}",
+            )
             file_reviews: list[tuple[PullFile, FileReview]] = []
-            for plan in plans:
-                review = await self._review_file(pull, plan)
+            for index, plan in enumerate(plans, start=1):
+                job.add_event(
+                    "review_file",
+                    f"[{index}/{len(plans)}] Asking the model about `{plan.file.filename}`",
+                )
+                review = await self._review_file(job, pull, plan)
                 file_reviews.append((plan.file, review))
 
             allowed = {
@@ -74,6 +86,10 @@ class ReviewAgent:
             }
             attached, leftover = self._filter_comments(file_reviews, allowed)
             body = self._build_summary(pull, file_reviews, leftover, skipped)
+            job.add_event(
+                "post",
+                f"Posting review with {len(attached)} inline comment(s)",
+            )
             created = await self.github.create_review(
                 owner,
                 name,
@@ -90,6 +106,7 @@ class ReviewAgent:
                     for item in attached
                 ],
             )
+            job.add_event("done", f"Review posted ({created.html_url or created.id})")
             return self.jobs.update(
                 job,
                 status=JobStatus.DONE,
@@ -123,6 +140,7 @@ class ReviewAgent:
                 )
             except Exception:
                 logger.exception("Also failed to post failure comment")
+            job.add_event("failed", f"{type(exc).__name__}: {exc}")
             return self.jobs.update(job, status=JobStatus.FAILED, error=str(exc))
 
     def _plan_files(
@@ -153,7 +171,9 @@ class ReviewAgent:
             remaining_slots -= 1
         return plans, skipped
 
-    async def _review_file(self, pull: PullRequest, plan: FilePlan) -> FileReview:
+    async def _review_file(
+        self, job: Job, pull: PullRequest, plan: FilePlan
+    ) -> FileReview:
         messages = [
             {"role": "system", "content": system_prompt(self.record)},
             {
@@ -161,8 +181,28 @@ class ReviewAgent:
                 "content": file_user_prompt(pull, plan.file, plan.commentable),
             },
         ]
-        raw = await self.llm.complete(messages)
-        return parse_review_json(raw, default_path=plan.file.filename)
+        completion = await self.llm.complete(messages)
+        parsed = parse_review_json(
+            completion.content, default_path=plan.file.filename
+        )
+        detail_parts = []
+        if completion.reasoning:
+            detail_parts.append(completion.reasoning)
+        if parsed.summary:
+            detail_parts.append(f"Summary: {parsed.summary}")
+        if parsed.comments:
+            detail_parts.append(f"{len(parsed.comments)} comment(s) proposed")
+        job.add_event(
+            "reasoning",
+            f"Model finished `{plan.file.filename}`"
+            + (
+                f" — {len(parsed.comments)} comment(s)"
+                if parsed.comments
+                else " — no inline comments"
+            ),
+            "\n\n".join(detail_parts),
+        )
+        return parsed
 
     def _filter_comments(
         self,

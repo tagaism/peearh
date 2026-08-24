@@ -68,7 +68,7 @@ Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or E
 docker compose up --build
 ```
 
-The API is [http://127.0.0.1:8008](http://127.0.0.1:8008).
+The API is [http://127.0.0.1:8008](http://127.0.0.1:8008). Open that URL in a browser to watch each review’s reasoning live (fetch, skipped files, model notes, posted comments).
 
 | Piece | Role |
 | --- | --- |
@@ -154,6 +154,8 @@ The agent for that repo posts one review on the head SHA:
 
 | Method | Path | Purpose |
 | --- | --- | --- |
+| GET | `/` | Live UI of review reasoning |
+| GET | `/jobs` | Recent jobs and event timeline |
 | GET | `/health` | Process is up |
 | GET | `/health/llm` | Configured LLM reachable |
 | GET | `/repos` | Registered agents |
