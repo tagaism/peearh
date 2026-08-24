@@ -5,8 +5,10 @@ def test_ui_is_served(client) -> None:
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
-    assert "Peearh" in response.text
+    assert "Peearh" in response.text or "peearh" in response.text
     assert "reasoning" in response.text.lower()
+    assert "sessions" in response.text
+    assert "SF Mono" in response.text or "Menlo" in response.text
 
 
 def test_list_jobs_includes_events(client) -> None:

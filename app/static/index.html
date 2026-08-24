@@ -3,95 +3,136 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Peearh — review process</title>
+  <title>Peearh</title>
   <style>
     :root {
-      --bg: #14110c;
-      --panel: #1e1a14;
-      --line: #3a3226;
-      --ink: #f3ead8;
-      --muted: #b5a48a;
-      --accent: #e2b340;
-      --run: #7eb8d6;
-      --ok: #8fbf7a;
-      --bad: #d67a6a;
-      --skip: #9a8b74;
+      --desk: #b8b8b8;
+      --bar: #2b2b2b;
+      --bar-text: #c8c8c8;
+      --bg: #1c1c1c;
+      --side: #161616;
+      --fg: #e6e6e6;
+      --dim: #6e6e6e;
+      --line: #2e2e2e;
+      --green: #32d74b;
+      --red: #ff453a;
+      --amber: #ffd60a;
+      --cyan: #64d2ff;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 15px/1.45 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; }
-    header {
-      display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
-      padding: 1rem 1.25rem; border-bottom: 1px solid var(--line);
+    html, body { height: 100%; margin: 0; background: var(--desk); }
+    body {
+      font: 13px/1.5 "SF Mono", Menlo, Monaco, "Courier New", monospace;
+      color: var(--fg);
+      padding: 18px;
     }
-    header h1 { margin: 0; font-size: 1.15rem; font-weight: 600; letter-spacing: 0.04em; }
-    header h1 span { color: var(--accent); }
-    header p { margin: 0; color: var(--muted); font-size: 0.85rem; }
-    .layout { display: grid; grid-template-columns: 280px 1fr; height: calc(100% - 58px); }
-    aside { border-right: 1px solid var(--line); overflow: auto; background: var(--panel); }
-    main { overflow: auto; padding: 1.25rem 1.5rem 3rem; }
-    .job {
-      display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line);
-      background: transparent; color: inherit; padding: 0.85rem 1rem; cursor: pointer; font: inherit;
+    .win {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 18px 50px rgba(0,0,0,.28), 0 0 0 1px rgba(0,0,0,.2);
     }
-    .job:hover, .job.active { background: #2a241b; }
-    .job .meta { color: var(--muted); font-size: 0.78rem; font-family: ui-monospace, Menlo, monospace; }
-    .pill {
-      display: inline-block; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase;
-      padding: 0.1rem 0.4rem; border: 1px solid var(--line); border-radius: 999px; color: var(--muted);
+    .bar {
+      flex: 0 0 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: var(--bar);
+      color: var(--bar-text);
+      font-size: 12px;
+      user-select: none;
     }
-    .pill.running, .pill.accepted { color: var(--run); border-color: var(--run); }
-    .pill.done { color: var(--ok); border-color: var(--ok); }
-    .pill.failed { color: var(--bad); border-color: var(--bad); }
-    .empty { color: var(--muted); max-width: 36rem; }
-    .empty code { color: var(--accent); }
-    ol.trace { list-style: none; margin: 0; padding: 0; }
-    ol.trace li {
-      position: relative; padding: 0 0 1.15rem 1.2rem; border-left: 1px solid var(--line); margin-left: 0.4rem;
+    .dots { position: absolute; left: 12px; display: flex; gap: 7px; }
+    .dots i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+    .dots .c { background: #ff5f57; }
+    .dots .n { background: #febc2e; }
+    .dots .o { background: #28c840; }
+    .body {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 0;
     }
-    ol.trace li::before {
-      content: ""; position: absolute; left: -5px; top: 0.35rem; width: 9px; height: 9px;
-      border-radius: 50%; background: var(--accent);
+    .sessions {
+      background: var(--side);
+      border-right: 1px solid var(--line);
+      overflow: auto;
+      padding: 10px 0 16px;
     }
-    ol.trace li.skip::before { background: var(--skip); }
-    ol.trace li.failed::before { background: var(--bad); }
-    ol.trace li.done::before { background: var(--ok); }
-    ol.trace .when { display: block; color: var(--muted); font-size: 0.75rem; font-family: ui-monospace, Menlo, monospace; }
-    ol.trace .msg { margin: 0.15rem 0 0; }
-    details {
-      margin-top: 0.45rem; background: #120f0b; border: 1px solid var(--line); padding: 0.4rem 0.6rem;
+    .sessions h2 {
+      margin: 0 12px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
-    details summary { cursor: pointer; color: var(--accent); font-size: 0.85rem; }
+    .reasoning {
+      overflow: auto;
+      padding: 14px 16px 32px;
+    }
+    a.job {
+      display: block;
+      color: inherit;
+      text-decoration: none;
+      padding: 6px 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    a.job:hover { background: #222; }
+    a.job.on { background: #2a2a2a; }
+    .row { display: flex; gap: 10px; align-items: flex-start; }
+    .g { width: 1.4em; flex: 0 0 1.4em; text-align: center; }
+    .g.ok { color: var(--green); }
+    .g.bad { color: var(--red); }
+    .g.run { color: var(--amber); }
+    .g.skip { color: var(--dim); }
+    .g.think { color: var(--cyan); }
+    .dim { color: var(--dim); }
+    .prompt { color: var(--green); }
     pre {
-      white-space: pre-wrap; word-break: break-word; margin: 0.5rem 0 0;
-      font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--ink);
+      margin: 0;
+      font: inherit;
+      color: var(--fg);
+      white-space: pre-wrap;
+      word-break: break-word;
     }
-    h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.35rem; }
-    .sub { color: var(--muted); margin: 0 0 1.25rem; font-family: ui-monospace, Menlo, monospace; font-size: 0.8rem; }
+    .blk {
+      margin: 0.2em 0 0.85em 2.4em;
+      color: var(--fg);
+    }
+    .empty { color: var(--dim); padding: 0 12px; }
     @media (max-width: 720px) {
-      .layout { grid-template-columns: 1fr; grid-template-rows: 34% 1fr; }
-      aside { border-right: 0; border-bottom: 1px solid var(--line); }
+      body { padding: 0; }
+      .win { border-radius: 0; }
+      .body { grid-template-columns: 1fr; grid-template-rows: 32% 1fr; }
+      .sessions { border-right: 0; border-bottom: 1px solid var(--line); }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Peearh <span>reasoning</span></h1>
-    <p>Live review process · polls every 1.5s</p>
-  </header>
-  <div class="layout">
-    <aside id="jobs"></aside>
-    <main id="detail">
-      <div class="empty">
-        <p>Waiting for a GitHub webhook. Open or push to a registered PR, then this page will show each step: fetch, skip, model reasoning, and the posted review.</p>
-        <p>Keep this tab open at <code>http://127.0.0.1:8008</code>.</p>
-      </div>
-    </main>
+  <div class="win">
+    <div class="bar">
+      <div class="dots" aria-hidden="true"><i class="c"></i><i class="n"></i><i class="o"></i></div>
+      <span>peearh — 127.0.0.1:8008</span>
+    </div>
+    <div class="body">
+      <nav class="sessions" id="sessions" aria-label="sessions"></nav>
+      <main class="reasoning" id="reasoning"></main>
+    </div>
   </div>
   <script>
-    const jobsEl = document.getElementById("jobs");
-    const detailEl = document.getElementById("detail");
+    const sessionsEl = document.getElementById("sessions");
+    const reasoningEl = document.getElementById("reasoning");
     let selected = location.hash.replace("#", "") || null;
     let cache = [];
+    const frames = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"];
+    let tickN = 0;
 
     function esc(s) {
       return String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -99,73 +140,130 @@
       }[c]));
     }
 
-    function fmt(iso) {
-      try { return new Date(iso).toLocaleTimeString(); } catch { return iso; }
+    function live(job) {
+      return job.status === "running" || job.status === "accepted";
     }
 
-    function renderList() {
+    function jobGlyph(job) {
+      if (job.status === "done") return { cls: "ok", html: "✓" };
+      if (job.status === "failed") return { cls: "bad", html: "✗" };
+      if (job.status === "ignored" || job.status === "duplicate") return { cls: "skip", html: "○" };
+      return { cls: "run", html: "spin" };
+    }
+
+    function eventGlyph(job, ev, i, events) {
+      const last = i === events.length - 1;
+      if (ev.kind === "failed") return { cls: "bad", html: "✗" };
+      if (ev.kind === "done") return { cls: "ok", html: "✓" };
+      if (ev.kind === "skip") return { cls: "skip", html: "○" };
+      if (ev.kind === "reasoning") return { cls: "think", html: "✻" };
+      if (live(job) && last) return { cls: "run", html: "spin" };
+      return { cls: "ok", html: "✓" };
+    }
+
+    function glyphHtml(g, spin) {
+      if (g.html === "spin") {
+        return `<span class="spin-slot">${esc(spin)}</span>`;
+      }
+      return g.html;
+    }
+
+    function renderSessions() {
+      const spin = frames[tickN % frames.length];
+      const rows = [`<h2>sessions</h2>`];
       if (!cache.length) {
-        jobsEl.innerHTML = '<p class="empty" style="padding:1rem">No jobs yet.</p>';
+        rows.push(`<p class="empty">no sessions yet</p>`);
+        sessionsEl.innerHTML = rows.join("");
         return;
       }
-      jobsEl.innerHTML = cache.map((job) => `
-        <button class="job ${job.id === selected ? "active" : ""}" data-id="${esc(job.id)}">
-          <span class="pill ${esc(job.status)}">${esc(job.status)}</span>
-          <div>${esc(job.repo)}${job.pr_number != null ? " #" + job.pr_number : ""}</div>
-          <div class="meta">${esc(job.action || "")} · ${fmt(job.created_at)}</div>
-        </button>
-      `).join("");
-      jobsEl.querySelectorAll(".job").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          selected = btn.dataset.id;
+      cache.forEach((job) => {
+        const g = jobGlyph(job);
+        const label = `${job.repo}${job.pr_number != null ? " #" + job.pr_number : ""}`;
+        const on = job.id === selected ? " on" : "";
+        rows.push(
+          `<a class="job${on}" href="#${esc(job.id)}" data-id="${esc(job.id)}">` +
+          `<span class="g ${g.cls}">${glyphHtml(g, spin)}</span>` +
+          `${esc(label)}` +
+          `</a>`
+        );
+      });
+      sessionsEl.innerHTML = rows.join("");
+      sessionsEl.querySelectorAll("a.job").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          e.preventDefault();
+          selected = el.dataset.id;
           location.hash = selected;
-          renderList();
-          renderDetail();
+          renderSessions();
+          renderReasoning();
         });
       });
     }
 
-    function renderDetail() {
+    function renderReasoning() {
+      const spin = frames[tickN % frames.length];
       const job = cache.find((j) => j.id === selected);
-      if (!job) {
-        detailEl.innerHTML = `<div class="empty"><p>Select a job, or wait for the next webhook.</p></div>`;
+      if (!cache.length) {
+        reasoningEl.innerHTML =
+          `<span class="prompt">peearh %</span> watch\n` +
+          `<div class="dim"># Peearh · live review reasoning</div>` +
+          `<p class="empty" style="padding:12px 0">Waiting for a webhook. Open or push a PR, then the full model reasoning appears here.</p>`;
         return;
       }
+      if (!job) {
+        reasoningEl.innerHTML = `<p class="empty">Select a session.</p>`;
+        return;
+      }
+      const title = `${job.repo}${job.pr_number != null ? " #" + job.pr_number : ""}`;
+      const parts = [
+        `<span class="prompt">peearh %</span> session ${esc(title)}\n`,
+        `<div class="dim">${esc(job.status)}  ${esc(job.action || "—")}  ${esc((job.head_sha || "").slice(0, 12))}</div>\n`,
+      ];
       const events = job.events || [];
-      const steps = events.length
-        ? `<ol class="trace">${events.map((ev) => `
-            <li class="${esc(ev.kind)}">
-              <span class="when">${fmt(ev.at)} · ${esc(ev.kind)}</span>
-              <p class="msg">${esc(ev.message)}</p>
-              ${ev.detail ? `<details ${ev.kind === "reasoning" ? "open" : ""}>
-                <summary>${ev.kind === "reasoning" ? "Reasoning / notes" : "Detail"}</summary>
-                <pre>${esc(ev.detail)}</pre>
-              </details>` : ""}
-            </li>`).join("")}</ol>`
-        : `<p class="empty">No steps recorded yet.</p>`;
-      detailEl.innerHTML = `
-        <h2>${esc(job.repo)}${job.pr_number != null ? " #" + job.pr_number : ""}</h2>
-        <p class="sub">${esc(job.status)} · ${esc(job.action || "—")} · ${esc(job.head_sha || "").slice(0, 12)}</p>
-        ${job.error ? `<p class="empty">${esc(job.error)}</p>` : ""}
-        ${steps}
-      `;
+      events.forEach((ev, i) => {
+        const g = eventGlyph(job, ev, i, events);
+        parts.push(
+          `<div class="row"><span class="g ${g.cls}">${glyphHtml(g, spin)}</span><span>${esc(ev.message)}</span></div>`
+        );
+        if (ev.detail) {
+          parts.push(`<div class="blk"><pre>${esc(ev.detail)}</pre></div>`);
+        }
+      });
+      if (live(job)) {
+        parts.push(`<div class="row"><span class="g run"><span class="spin-slot">${esc(spin)}</span></span><span>working…</span></div>`);
+      } else if (job.status === "done") {
+        parts.push(`<div class="row"><span class="g ok">✓</span><span>done</span></div>`);
+      } else if (job.status === "failed") {
+        parts.push(`<div class="row"><span class="g bad">✗</span><span>${esc(job.error || "failed")}</span></div>`);
+      }
+      reasoningEl.innerHTML = parts.join("");
     }
 
-    async function tick() {
+    function render() {
+      const y = reasoningEl.scrollTop;
+      renderSessions();
+      renderReasoning();
+      reasoningEl.scrollTop = y;
+    }
+
+    function spinOnly() {
+      tickN += 1;
+      const ch = frames[tickN % frames.length];
+      document.querySelectorAll(".spin-slot").forEach((el) => { el.textContent = ch; });
+    }
+
+    async function poll() {
       try {
         const res = await fetch("/jobs");
         const data = await res.json();
         cache = data.jobs || [];
         if (!selected && cache.length) selected = cache[0].id;
-        renderList();
-        renderDetail();
-      } catch (err) {
-        detailEl.innerHTML = `<p class="empty">Could not load jobs: ${esc(err)}</p>`;
-      }
+      } catch (_) { /* keep last frame */ }
+      render();
     }
 
-    tick();
-    setInterval(tick, 1500);
+    setInterval(spinOnly, 80);
+    poll();
+    setInterval(poll, 1500);
   </script>
 </body>
 </html>
