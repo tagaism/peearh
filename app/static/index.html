@@ -133,6 +133,7 @@
     let cache = [];
     const frames = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"];
     let tickN = 0;
+    let stick = true;
 
     function esc(s) {
       return String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -160,6 +161,18 @@
       if (live(job) && last) return { cls: "run", html: "spin" };
       return { cls: "ok", html: "✓" };
     }
+
+    function nearBottom(el, slop) {
+      return el.scrollHeight - el.scrollTop - el.clientHeight <= (slop ?? 64);
+    }
+
+    function scrollToNewest() {
+      reasoningEl.scrollTop = reasoningEl.scrollHeight;
+    }
+
+    reasoningEl.addEventListener("scroll", () => {
+      stick = nearBottom(reasoningEl);
+    });
 
     function glyphHtml(g, spin) {
       if (g.html === "spin") {
@@ -193,6 +206,7 @@
           e.preventDefault();
           selected = el.dataset.id;
           location.hash = selected;
+          stick = true;
           renderSessions();
           renderReasoning();
         });
@@ -200,6 +214,8 @@
     }
 
     function renderReasoning() {
+      const pin = stick || nearBottom(reasoningEl);
+      const y = reasoningEl.scrollTop;
       const spin = frames[tickN % frames.length];
       const job = cache.find((j) => j.id === selected);
       if (!cache.length) {
@@ -236,13 +252,13 @@
         parts.push(`<div class="row"><span class="g bad">✗</span><span>${esc(job.error || "failed")}</span></div>`);
       }
       reasoningEl.innerHTML = parts.join("");
+      if (pin) scrollToNewest();
+      else reasoningEl.scrollTop = y;
     }
 
     function render() {
-      const y = reasoningEl.scrollTop;
       renderSessions();
       renderReasoning();
-      reasoningEl.scrollTop = y;
     }
 
     function spinOnly() {

@@ -8,6 +8,8 @@ def test_ui_is_served(client) -> None:
     assert "Peearh" in response.text or "peearh" in response.text
     assert "reasoning" in response.text.lower()
     assert "sessions" in response.text
+    assert "scrollToNewest" in response.text
+    assert "stick" in response.text
     assert "SF Mono" in response.text or "Menlo" in response.text
 
 
